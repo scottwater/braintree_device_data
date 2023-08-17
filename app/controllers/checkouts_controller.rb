@@ -19,21 +19,42 @@ class CheckoutsController < ApplicationController
   end
 
   def create
-    amount = params["amount"] # In production you should not take amounts directly from clients
+    email = params["email"]
     nonce = params["payment_method_nonce"]
+    device_data = params["device_data"]
 
-    result = gateway.transaction.sale(
-      amount: amount,
+    customer_data = {
+      email: email,
       payment_method_nonce: nonce,
-      :options => {
-        :submit_for_settlement => true
-      }
-    )
+      device_data: device_data
+    }
 
-    if result.success? || result.transaction
-      redirect_to checkout_path(result.transaction.id)
+    customer_result = gateway.customer.create(customer_data)
+    subscription_result = nil
+
+
+    if customer_result.success?
+      customer = customer_result.customer
+
+      subscription_data = {
+        payment_method_token: customer.default_payment_method.token,
+        plan_id: :premium,
+        price: 79,
+        trial_duration: 0
+      }
+
+      subscription_result = @gateway.subscription.create(subscription_data)
+
+
+    end
+
+
+    if subscription_result&.success?
+
+      redirect_to checkout_path(subscription_result.subscription.transactions.first.id)
     else
-      error_messages = result.errors.map { |error| "Error: #{error.code}: #{error.message}" }
+      error_result = subscription_result || customer_result
+      error_messages = error_result&.errors&.map { |error| "Error: #{error.code}: #{error.message}" }
       flash[:error] = error_messages
       redirect_to new_checkout_path
     end

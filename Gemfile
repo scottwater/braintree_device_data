@@ -28,6 +28,7 @@ gem 'dotenv', '~> 2.0'
 gem 'webrick', '~> 1.8'
 
 group :development, :test do
+  gem "pry-rails"
   # Use sqlite in development and test for ease of setup
   gem 'sqlite3'
   # Call 'byebug' anywhere in the code to stop execution and get a debugger console
